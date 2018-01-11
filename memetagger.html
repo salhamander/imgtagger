@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Meme Tagger</title>
+	<meta charset="utf-8">
+	<script type="text/javascript" src="js/jquery.js"></script>
+	<script src="js/jquery-csv-master/src/jquery.csv.js"></script>
+</head>
+<body>
+
+	<style type="text/css">
+	*{
+		font-family: 'Verdana', sans-serif;
+	}
+	#tags {
+		width: 25%;
+		float: left;
+		overflow: hidden;
+	}
+	.visualdiv{
+	}
+
+	input[type=radio]:checked + label{
+		color: green;
+		font-weight: bold;
+	}
+	input[type=checkbox]:checked + label{
+		color: green;
+		font-weight: bold;
+	}
+	</style>
+
+	<script type="text/javascript">
+
+	$(document).ready(function() {
+
+		var containernumber = 0;
+		var data;
+		var pageid;
+		var imageurl;
+		var pagechosen;
+		var pagename;
+		var startlength = 0;
+		var maxlength = 1000;
+		var modeselected;
+		var seemoreclicked = true;
+		var datatype;
+		var datevalue;
+		var imageclicked = false;
+		var clickedid;
+		var clickedlink;
+		var clickedrow;
+		var clickedpage;
+		var imgsize;
+		var currentrownumber;
+		var fileuploadchecked = false; var redditchecked = false; var fbchecked = false;
+		var funnelchecked = true;
+		var imgcounter = 0;
+		var files;
+		var file;
+		var loadedfile;
+		var uploadeddata;
+
+		var datecolumn; var dateinput;
+		var scorecolumn; var scoreinput;
+		var	textcolumn; var textinput;
+		var	linkcolumn; var linkinput;
+		var	authorcolumn; var authorinput;
+		var	subredditcolumn; var subredditinput;
+
+		var imagenumber = 0;
+		var ar_imageobjects = []
+
+		document.getElementById('files').addEventListener('change', handleFileSelect, false);
+
+	function handleFileSelect(e) {			//gets called when the user uploads a file
+		console.log('reading file')
+		files = e.target.files;
+		file = files[0];
+		readFile(this.files[0]);
+	}
+
+	function readFile(file){					//filereader
+		var reader = new FileReader();
+		reader.readAsText(file);
+		reader.onload = function(event){
+			loadedfile = event.target.result;
+			if(file.name.substring(file.name.length - 3) == "csv"){		//object is already stored in 'csv'
+				uploadeddata = $.csv.toObjects(loadedfile);
+			console.log(uploadeddata)
+			imagenumber = 0
+			initialiseObjects()
+			printImage(uploadeddata, imagenumber)
+		}
+
+	}
+	reader.onerror = function(){
+		alert('Unable to read ' + file.fileName);
+	}
+}
+
+function initialiseObjects(){
+	for (var i = 0; i < (uploadeddata.length - 1); i++) {
+		var tags = {}
+		tags.imagename = uploadeddata[i].imagefile
+		tags.threadnumber = uploadeddata[i].threadnumber
+		tags.extention = ''
+		tags.memetags = "other"
+		tags.themetags = []
+
+		ar_imageobjects.push({tags: tags});
+	}
+	console.log(ar_imageobjects)
+
+	$("#counter").html("0/" + uploadeddata.length + "")
+}
+
+function changeTags(activeimg){
+	//storing of data first
+	var imgno = activeimg
+	var activeobj = ar_imageobjects[imgno]["tags"]
+
+	var checkedmeme = $('input[name="memeselection"]:checked').val()
+	var checkedthemes = $('input[name="themeselection"]:checked').map(function() {
+		return this.value;
+	}).get();
+
+	console.log(checkedmeme)
+	console.log(checkedthemes)
+	/*checkedThemes = checkedThemes.join('<!>')
+	console.log(checkedThemes)*/
+	activeobj["memetags"] = checkedmeme
+	activeobj["themetags"] = checkedthemes
+	console.log(activeobj)
+}
+
+function resetTags(activeimg){
+	var imgno = activeimg
+	var activeobj = ar_imageobjects[imgno]["tags"]
+	
+	$("input[name='themeselection']").prop('checked', false);
+	
+	console.log(activeobj["memetags"])
+	var activememe = activeobj["memetags"]
+	$("input[value='" + activememe + "']").prop('checked', true);
+
+	console.log(activeobj["themetags"])
+	if(activeobj["themetags"] == 'other'){
+		console.log('no memes!')
+		$("input[value='other']").prop('checked', true);
+	}
+	else{
+		for (var i = 0; i < activeobj["themetags"].length; i++) {
+			var activetheme = activeobj["themetags"][i]
+			console.log(activetheme)
+			$("input[value='" + activetheme + "']").prop('checked', true);
+		}
+	}
+	$("#counter").html("" + imgno + "/" + uploadeddata.length + "")
+}
+
+var filetype = '.jpg'
+var loopcounter = 0
+
+	function printImage(e, imageno){							//print a singular image in the bottom container
+		var data = e;
+		var imgnumber = imageno
+		var imgurl = "img/" + data[imgnumber].threadnumber + '-' + data[imgnumber].imagefile + filetype + ""
+		
+		if((data[imgnumber].imagefile.length) > 0){
+			$.ajax({
+				url: imgurl,
+				type:'HEAD',
+				error: function(){
+					if(filetype == '.png'){
+						filetype = '.jpg'
+					}
+					else if(filetype == '.jpg'){
+						filetype = '.png'
+					}
+					else if (filetype == '.gif'){
+						filetype = '.jpg'
+					}
+					loopthingie()
+				}
+			});
+			imgurl = "img/" + data[imgnumber].threadnumber + '-' + data[imgnumber].imagefile + filetype
+			$(".imagediv").html("<img id='chanimg' src='" + imgurl + "'>");
+			ar_imageobjects[imgnumber]['tags']['extention'] = filetype
+		}
+		else{
+			$(".imagediv").html("No image used")
+		}
+		$("#comment").html("<p>" + data[imgnumber].comment + "</p>");
+
+	}
+
+	function loopthingie(){
+		loopcounter++
+		if(loopcounter > 5){
+			filetype = '.gif'
+			loopcounter = 0
+		}
+		printImage(uploadeddata, imagenumber)
+	}
+	$('.changeimage').click(function(e){
+		var clickevent = e.target.value
+		changeImage(clickevent)
+	});
+
+	function changeImage(e){
+		var pressed = e
+		if(pressed == "previous"){
+			if(imagenumber == 0){
+				alert('First image!');		
+			}
+			else{
+				imagenumber--;
+				console.log(imagenumber)
+				printImage(uploadeddata, imagenumber)
+				resetTags(imagenumber)
+			}
+		}
+		if(pressed == "next"){
+			if(imagenumber == uploadeddata.length){
+				alert('Last image!');
+			}
+			else{
+				imagenumber ++
+				console.log(imagenumber)
+				printImage(uploadeddata, imagenumber)
+				resetTags(imagenumber)
+			}
+		}
+		if(pressed =="previousimage"){
+			if(imagenumber == 0){
+				alert('First image!');		
+			}
+			else{
+				imagenumber--
+				while (uploadeddata[imagenumber].imagefile == ""){
+					imagenumber--
+				}
+				console.log(imagenumber)
+				printImage(uploadeddata, imagenumber)
+				resetTags(imagenumber)
+			}
+		}
+
+		if(pressed =="nextimage"){
+			if(imagenumber == uploadeddata.length){
+				alert('Last image!');
+			}
+			else{
+				imagenumber++
+				while (uploadeddata[imagenumber].imagefile == ""){
+					imagenumber++
+				}
+				console.log(imagenumber)
+				printImage(uploadeddata, imagenumber)
+				resetTags(imagenumber)
+
+			}
+		}
+	}
+
+$('input[name="themeselection"]').click(function(){
+	changeTags(imagenumber);
+});
+$('input[name="memeselection"]').click(function(){
+	changeTags(imagenumber);
+});
+
+$('#createcsv').click(function(){
+	 //Get the file contents
+	 var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(ar_imageobjects));
+	 $("#downloadbtn").html('<a href="data:' + dataStr + '" download="' +  file.name.substring(0, file.name.length - 4) + '-tagdata.json">download JSON</a>');
+
+	});
+
+
+$(document).keydown(function(e) {
+	switch(e.which) {
+    	//THEMES
+    	case 49:
+    	$("input[value='antisemitism'").click()
+    	changeTags(imagenumber)
+    	console.log('antisemitism')
+    	break;
+
+    	case 50:
+    	$("input[value='nazism'").click()
+    	changeTags(imagenumber)
+    	console.log('nazism')
+    	break;
+
+    	case 51:
+    	$("input[value='racialism'").click()
+    	changeTags(imagenumber)
+    	console.log('racialism')
+    	break;
+
+    	case 52:
+    	$("input[value='eunationalism'").click()
+    	changeTags(imagenumber)
+    	console.log('eunationalism')
+    	break;
+
+    	case 53:
+    	$("input[value='antiislam'").click()
+    	changeTags(imagenumber)
+    	console.log('antiislam')
+    	break;
+
+    	case 54:
+    	$("input[value='antileft'").click()
+    	changeTags(imagenumber)
+    	console.log('antileft')
+    	break;
+
+    	case 55:
+    	$("input[value='misogyny'").click()
+    	changeTags(imagenumber)
+    	console.log('misogyny')
+    	break;
+    	case 56:
+    	$("input[value='conspiracy'").click()
+    	changeTags(imagenumber)
+    	console.log('conspiracy')
+    	break;
+
+    	case 57:
+    	$("input[value='trumpism'").click()
+    	changeTags(imagenumber)
+    	console.log('trumpism')
+    	break;
+
+    	case 48:
+    	$("input[value='antiusa'").click()
+    	changeTags(imagenumber)
+    	console.log('antiusa')
+    	break;
+
+    	case 81:
+    	$("input[value='historical'").click()
+    	changeTags(imagenumber)
+    	console.log('historical')
+    	break; 
+
+    	case 87:
+    	$("input[value='christian'").click()
+    	changeTags(imagenumber)
+    	console.log('christian')
+    	break;
+
+    	case 69:
+    	$("input[value='egyptian'").click()
+    	changeTags(imagenumber)
+    	console.log('egyptian')
+    	break;
+
+    	case 82:
+    	$("input[value='nordic'").click()
+    	changeTags(imagenumber)
+    	console.log('nordic')
+    	break;
+
+    	case 84:
+    	$("input[value='vaporwave'").click()
+    	changeTags(imagenumber)
+    	console.log('vaporwave')
+    	break;
+
+    	case 89:
+    	$("input[value='lgbtphobe'").click()
+    	changeTags(imagenumber)
+    	console.log('lgbtphobe')
+    	break;
+
+    	case 85:
+    	$("input[value='multimeme'").click()
+    	changeTags(imagenumber)
+    	console.log('multimeme')
+    	break;
+
+    	case 73:
+    	$("input[value='esoteric'").click()
+    	changeTags(imagenumber)
+    	console.log('esoteric')
+    	break;
+
+    	case 79:
+    	$("input[value='reactionimg'").click()
+    	changeTags(imagenumber)
+    	console.log('reactionimg')
+    	break;
+
+        //MEMES
+        case 65:
+        $("input[value='pepe'").click()
+        changeTags(imagenumber)
+        console.log('pepe')
+        break;
+
+        case 83:
+        $("input[value='happymerchant'").click()
+        changeTags(imagenumber)
+        console.log('happymerchant')
+        break; 
+
+        case 68:
+        $("input[value='spurdo'").click()
+        changeTags(imagenumber)
+        console.log('spurdo')
+        break; 
+
+        case 70:
+        $("input[value='picardia'").click()
+        changeTags(imagenumber)
+        console.log('picardia')
+        break; 
+
+        case 71:
+        $("input[value='amerimutt'").click()
+        changeTags(imagenumber)
+        console.log('amerimutt')
+        break; 
+
+        case 72:
+        $("input[value='feelsguy'").click()
+        changeTags(imagenumber)
+        console.log('feelsguy')
+        break; 
+
+        case 74:
+        $("input[value='thinkingemoji'").click()
+        changeTags(imagenumber)
+        console.log('thinkingemoji')
+        break; 
+
+        case 75:
+        $("input[value='biggrin'").click()
+        changeTags(imagenumber)
+        console.log('biggrin')
+        break; 
+
+        case 76:
+        $("input[value='anime'").click()
+        changeTags(imagenumber)
+        console.log('anime')
+        break; 
+
+        case 90:
+        $("input[value='doge'").click()
+        changeTags(imagenumber)
+        console.log('doge')
+        break; 
+
+        case 88:
+        $("input[value='taylorswift'").click()
+        changeTags(imagenumber)
+        console.log('taylorswift')
+        break; 
+
+        case 67:
+        $("input[value='australianguy'").click()
+        changeTags(imagenumber)
+        console.log('australianguy')
+        break; 
+
+        case 86:
+        $("input[value='comics'").click()
+        changeTags(imagenumber)
+        console.log('comics')
+        break; 
+
+        case 66:
+        $("input[value='stats'").click()
+        changeTags(imagenumber)
+        console.log('stats')
+        break;
+        case 78:
+        $("input[value='screencaps'").click()
+        changeTags(imagenumber)
+        console.log('screencaps')
+        break; 
+
+        case 77:
+        $("input[value='maps'").click()
+        changeTags(imagenumber)
+        console.log('maps')
+        break; 
+
+        case 188:
+        $("input[value='historicalphotos'").click()
+        changeTags(imagenumber)
+        console.log('historicalphotos')
+        break; 
+
+        case 190:
+        $("input[value='quotes'").click()
+        changeTags(imagenumber)
+        console.log('quotes')
+        break; 
+
+        case 189:
+        $("input[value='harold'").click()
+        changeTags(imagenumber)
+        console.log('harold')
+        break;
+
+        case 59:
+        $("input[value='other'").click()
+        changeTags(imagenumber)
+        console.log('other')
+        break;
+
+        case 37:
+        e.preventDefault();
+        $('#previmg').click()
+        break; 
+
+        case 39:
+        e.preventDefault();
+        $('#nextimg').click()
+        break;
+
+        default: return;
+    }
+});
+});
+</script>
+
+
+<div id="uploadpanel">
+	<input type="file" id="files" name="files[]" multiple />
+	<output id="list"></output>
+</div>
+
+
+<div class="taggerpannel">
+
+
+	<div id="tags">
+		<button class='changeimage' id="previmg" value="previousimage">previous image</button>
+		<button class='changeimage' id="nextimg" value="nextimage">next image</button>
+		<br>
+		<button class='changeimage' value="previous">previous post</button>
+		<button class='changeimage' value="next">next post</button>
+
+		<br>
+		<button id="createcsv">Create JSON (use often!)</button>
+		<p id="downloadbtn"></p>
+		<div id="themes">
+			<h4>THEMES</h4>
+			<form>
+				<input type="checkbox" name="themeselection"      id="antisemitism"      value="antisemitism"> <label for="antisemitism">1 Antisemitism</label>
+				<br><input type="checkbox" name="themeselection"  id="nazism"            value="nazism"> <label for="nazism">2 (neo) Nazism</label>
+				<br><input type="checkbox" name="themeselection"  id="racialism"  value="racialism"> <label for="racialism">3 Racialism</label>
+				<br><input type="checkbox" name="themeselection"  id="eunationalism"     value="eunationalism"> <label for="eunationalism">4 European nationalism</label>
+				<br><input type="checkbox" name="themeselection"  id="antiislam"         value="antiislam"> <label for="antiislam">5 Anti-islam</label>
+				<br><input type="checkbox" name="themeselection"  id="antileft"          value="antileft"> <label for="antileft">6 Anti-left/anti-liberal</label>
+				<br><input type="checkbox" name="themeselection"  id="misogyny"          value="misogyny"> <label for="misogyny">7 Misogyny/sexual</label>
+				<br><input type="checkbox" name="themeselection"  id="conspiracy"        value="conspiracy"> <label for="conspiracy">8 Conspiracy</label>
+				<br><input type="checkbox" name="themeselection"  id="trumpism"          value="trumpism"> <label for="trumpism">9 Trumpism</label>
+				<br><input type="checkbox" name="themeselection"  id="antiusa"           value="antiusa"> <label for="antiusa">0 Anti-(plebian)USA</label>
+				<br><input type="checkbox" name="themeselection"  id="historical"        value="historical"> <label for="historical">Q Historical imagery</label>
+				<br><input type="checkbox" name="themeselection"  id="christian"         value="christian"> <label for="christian">W Crusades/Christian imagery</label>
+				<br><input type="checkbox" name="themeselection"  id="egyptian"          value="egyptian"> <label for="egyptian">E Egyptian imagery</label>
+				<br><input type="checkbox" name="themeselection"  id="nordic"            value="nordic"> <label for="nordic">R Nordic imagery</label>
+				<br><input type="checkbox" name="themeselection"  id="vaporwave"         value="vaporwave"> <label for="vaporwave">T Vaporwave</label>
+				<br><input type="checkbox" name="themeselection"  id="lgbtphobe"         value="lgbtphobe"> <label for="lgbtphobe">Y LGBT-phobic</label>
+				<br><input type="checkbox" name="themeselection"  id="multimeme" value="multimeme"> <label for="multimeme">U Multi-meme</label>
+				<br><input type="checkbox" name="themeselection"  id="esoteric" value="esoteric"> <label for="esoteric">I Esoteric</label>
+			</form>
+		</div>
+		<div id="memes">
+			<h4>MEMES</h4>
+			<input type="radio" name="memeselection" id="pepe"           value="pepe"> <label for="pepe">A Pepe the Frog</label>
+			<br><input type="radio" name="memeselection" id="happymerchant"  value="happymerchant"> <label for="happymerchant">S Le Happy Merchant</label>
+			<br><input type="radio" name="memeselection" id="spurdo"         value="spurdo"> <label for="spurdo">D Spurdo</label>
+			<br><input type="radio" name="memeselection" id="picardia"       value="picardia"> <label for="picardia">F Picardia</label>
+			<br><input type="radio" name="memeselection" id="amerimutt"    value="amerimutt"> <label for="amerimutt">G Amerimutt</label>
+			<br><input type="radio" name="memeselection" id="feelsguy"       value="feelsguy"> <label for="feelsguy">H Feels guy</label>
+			<br><input type="radio" name="memeselection" id="thinkingemoji"  value="thinkingemoji"> <label for="thinkingemoji">J Thinking emoji</label>
+			<br><input type="radio" name="memeselection" id="biggrin"        value="biggrin"> <label for="biggrin">K Biggrin</label>
+			<br><input type="radio" name="memeselection" id="anime"          value="anime"> <label for="anime">L Anime/hentai</label>
+			<br><input type="radio" name="memeselection" id="doge"           value="doge"> <label for="doge">Z Doge</label>
+			<br><input type="radio" name="memeselection" id="taylorswift"    value="taylorswift"> <label for="taylorswift">X Taylor Swift</label>
+			<br><input type="radio" name="memeselection" id="australianguy"  value="australianguy"> <label for="australianguy">C Australian guy</label>
+			<br><input type="radio" name="memeselection" id="comics"         value="comics"> <label for="comics">V Comics</label>
+			<br><input type="radio" name="memeselection" id="stats"          value="stats"> <label for="stats">B Statistics/graphs</label>
+			<br><input type="radio" name="memeselection" id="screencaps"     value="screencaps"> <label for="screencaps">N Screencaptures</label>
+			<br><input type="radio" name="memeselection" id="maps"           value="maps"> <label for="maps">M Maps</label>
+			<br><input type="radio" name="memeselection" id="flags"           value="flags"> <label for="maps"> Flags</label>
+			<br><input type="radio" name="memeselection" id="historicalphotos"     value="historicalphotos"> <label for="historicalphotos">, Historical photos</label>
+			<br><input type="radio" name="memeselection" id="quotes"         value="quotes"> <label for="quotes">. Quote images</label>
+			<br><input type="radio" name="memeselection" id="harold"         value="harold"> <label for="harold"> Harold</label>
+			<br><input type="radio" name="memeselection" id="other" 		value="other" checked> <label for="other">; Other</label>
+		</form>
+	</div>
+</div>
+<div class="visualdiv">
+	<p id="counter">0/0</p>
+	<div class="imagediv">
+		<img id="chanimg" src="">
+	</div>
+	<div id="comment"></div></div>
+
+
+
+
+</body>
+</html>
